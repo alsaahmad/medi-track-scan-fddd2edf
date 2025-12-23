@@ -15,6 +15,7 @@ import {
   Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const features = [
@@ -70,6 +71,7 @@ export const LandingPage = () => {
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link to="/auth">
               <Button variant="ghost" className="hidden sm:flex">Sign In</Button>
             </Link>
@@ -109,7 +111,7 @@ export const LandingPage = () => {
               
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-foreground mb-6 leading-tight">
                 Fight Counterfeit Drugs with{" "}
-                <span className="text-gradient">Blockchain-Grade</span>{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500">Blockchain-Grade</span>{" "}
                 Verification
               </h1>
               
