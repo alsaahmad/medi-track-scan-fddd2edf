@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
-import { Drug, getStatusColor, getStatusLabel } from "@/lib/mockData";
+import { DrugStatus, getStatusColor, getStatusLabel } from "@/lib/mockData";
 
 interface StatusBadgeProps {
-  status: Drug['status'];
+  status: DrugStatus;
   className?: string;
 }
 
