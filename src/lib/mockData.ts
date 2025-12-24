@@ -1,4 +1,4 @@
-// Mock data for demo purposes
+// Mock data for demo purposes AND database types
 export interface Drug {
   id: string;
   name: string;
@@ -7,15 +7,16 @@ export interface Drug {
   manufacturerId: string;
   manufacturedDate: string;
   expiryDate: string;
-  status: 'manufactured' | 'in-transit' | 'at-distributor' | 'at-pharmacy' | 'sold' | 'flagged';
+  status: 'manufactured' | 'in-transit' | 'at-distributor' | 'at-pharmacy' | 'sold' | 'flagged' | 'created' | 'distributed' | 'in_pharmacy';
   isAuthentic: boolean;
   scanHistory: ScanLog[];
+  qrCodeHash?: string;
 }
 
 export interface ScanLog {
   id: string;
   timestamp: string;
-  role: 'manufacturer' | 'distributor' | 'pharmacy' | 'consumer';
+  role: 'manufacturer' | 'distributor' | 'pharmacy' | 'consumer' | 'admin';
   location: string;
   action: string;
   userId: string;
@@ -116,36 +117,129 @@ export const mockUsers: User[] = [
   { id: 'usr-4', name: 'Admin User', email: 'admin@meditrack.com', role: 'admin' },
 ];
 
-export const getStatusColor = (status: Drug['status']): string => {
+export type DrugStatus = Drug['status'];
+
+export const getStatusColor = (status: DrugStatus): string => {
   switch (status) {
-    case 'manufactured': return 'bg-primary/10 text-primary border-primary/20';
-    case 'in-transit': return 'bg-warning/10 text-warning border-warning/20';
-    case 'at-distributor': return 'bg-accent text-accent-foreground';
-    case 'at-pharmacy': return 'bg-success/10 text-success border-success/20';
-    case 'sold': return 'bg-muted text-muted-foreground';
-    case 'flagged': return 'bg-destructive/10 text-destructive border-destructive/20';
-    default: return 'bg-muted text-muted-foreground';
+    case 'manufactured':
+    case 'created':
+      return 'bg-primary/10 text-primary border-primary/20';
+    case 'in-transit':
+    case 'distributed':
+      return 'bg-warning/10 text-warning border-warning/20';
+    case 'at-distributor': 
+      return 'bg-accent text-accent-foreground';
+    case 'at-pharmacy':
+    case 'in_pharmacy':
+      return 'bg-success/10 text-success border-success/20';
+    case 'sold': 
+      return 'bg-muted text-muted-foreground';
+    case 'flagged': 
+      return 'bg-destructive/10 text-destructive border-destructive/20';
+    default: 
+      return 'bg-muted text-muted-foreground';
   }
 };
 
-export const getStatusLabel = (status: Drug['status']): string => {
+export const getStatusLabel = (status: DrugStatus): string => {
   switch (status) {
-    case 'manufactured': return 'Manufactured';
-    case 'in-transit': return 'In Transit';
-    case 'at-distributor': return 'At Distributor';
-    case 'at-pharmacy': return 'At Pharmacy';
-    case 'sold': return 'Sold';
-    case 'flagged': return 'Flagged';
-    default: return status;
+    case 'manufactured':
+    case 'created':
+      return 'Created';
+    case 'in-transit':
+    case 'distributed':
+      return 'Distributed';
+    case 'at-distributor': 
+      return 'At Distributor';
+    case 'at-pharmacy':
+    case 'in_pharmacy':
+      return 'At Pharmacy';
+    case 'sold': 
+      return 'Sold';
+    case 'flagged': 
+      return 'Flagged';
+    default: 
+      return String(status);
   }
 };
 
-export const getRoleColor = (role: ScanLog['role']): string => {
+export const getRoleColor = (role: string): string => {
   switch (role) {
     case 'manufacturer': return 'bg-primary';
     case 'distributor': return 'bg-warning';
     case 'pharmacy': return 'bg-success';
     case 'consumer': return 'bg-accent-foreground';
+    case 'admin': return 'bg-primary';
     default: return 'bg-muted';
+  }
+};
+
+// Helper to convert database drug to UI drug format
+export const mapDatabaseDrugToUI = (drug: {
+  id: string;
+  drug_name: string;
+  batch_number: string;
+  expiry_date: string;
+  manufacturer_id: string;
+  qr_code_hash: string;
+  current_status: string;
+  created_at: string;
+}, manufacturerName?: string): Drug => {
+  return {
+    id: drug.id,
+    name: drug.drug_name,
+    batchNumber: drug.batch_number,
+    manufacturer: manufacturerName || 'Unknown',
+    manufacturerId: drug.manufacturer_id,
+    manufacturedDate: drug.created_at,
+    expiryDate: drug.expiry_date,
+    status: drug.current_status as DrugStatus,
+    isAuthentic: drug.current_status !== 'flagged',
+    scanHistory: [],
+    qrCodeHash: drug.qr_code_hash,
+  };
+};
+
+// Helper to convert database scan log to UI format
+export const mapDatabaseScanLogToUI = (log: {
+  id: string;
+  scan_time: string;
+  role: string;
+  location: string | null;
+  verification_result: string;
+  scanned_by_user_id: string | null;
+  ai_explanation: string | null;
+}): ScanLog => {
+  return {
+    id: log.id,
+    timestamp: log.scan_time,
+    role: log.role as ScanLog['role'],
+    location: log.location || 'Unknown Location',
+    action: getActionFromResult(log.verification_result),
+    userId: log.scanned_by_user_id || '',
+    userName: getRoleDisplayName(log.role),
+  };
+};
+
+const getActionFromResult = (result: string): string => {
+  switch (result) {
+    case 'created': return 'Manufactured & Registered';
+    case 'distributed': return 'Received at Distribution Center';
+    case 'in_pharmacy': return 'Received at Pharmacy';
+    case 'sold': return 'Verified & Sold';
+    case 'flagged': return 'FLAGGED - Suspicious Activity';
+    case 'verified': return 'Verified by Consumer';
+    default: return result;
+  }
+};
+
+const getRoleDisplayName = (role: string): string => {
+  switch (role) {
+    case 'manufacturer': return 'Manufacturer';
+    case 'distributor': return 'Distributor';
+    case 'pharmacy': return 'Pharmacy';
+    case 'consumer': return 'Consumer';
+    case 'admin': return 'Administrator';
+    default: return role;
   }
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
 import { 
@@ -11,36 +11,82 @@ import {
   Calendar,
   Building2,
   Hash,
-  MapPin
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QRScanner } from "@/components/QRScanner";
 import { ScanTimeline } from "@/components/ScanTimeline";
-import { mockDrugs, Drug } from "@/lib/mockData";
+import { AIChat } from "@/components/AIChat";
+import { useVerifyDrug } from "@/hooks/useDrugs";
+import { Drug, ScanLog, mapDatabaseDrugToUI, mapDatabaseScanLogToUI } from "@/lib/mockData";
 
 export const ConsumerVerifyPage = () => {
   const { drugId } = useParams();
   const [showScanner, setShowScanner] = useState(false);
-  const [verifiedDrug, setVerifiedDrug] = useState<Drug | null>(
-    drugId ? mockDrugs.find(d => d.id === drugId) || null : null
-  );
+  const [verifiedDrug, setVerifiedDrug] = useState<Drug | null>(null);
+  const [scanHistory, setScanHistory] = useState<ScanLog[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [hasAlerts, setHasAlerts] = useState(false);
+  const [manualInput, setManualInput] = useState('');
+  
+  const verifyDrug = useVerifyDrug();
+
+  // Auto-verify if drugId is in URL
+  useEffect(() => {
+    if (drugId) {
+      handleVerify(drugId);
+    }
+  }, [drugId]);
+
+  const handleVerify = async (qrHash: string) => {
+    setIsScanning(true);
+    
+    try {
+      const result = await verifyDrug.mutateAsync(qrHash);
+      
+      if (result.drug) {
+        const mappedDrug = mapDatabaseDrugToUI(result.drug);
+        mappedDrug.isAuthentic = result.isAuthentic;
+        setVerifiedDrug(mappedDrug);
+        
+        const mappedLogs = result.scanLogs.map(l => mapDatabaseScanLogToUI(l));
+        setScanHistory(mappedLogs);
+        setHasAlerts(result.alerts.length > 0);
+      } else {
+        setVerifiedDrug(null);
+        setScanHistory([]);
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      setVerifiedDrug(null);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const handleScan = (result: string) => {
     setShowScanner(false);
-    setIsScanning(true);
     
-    // Simulate verification delay
-    setTimeout(() => {
-      const scannedId = result.split('/').pop() || '';
-      const drug = mockDrugs.find(d => d.id === scannedId);
-      setVerifiedDrug(drug || null);
-      setIsScanning(false);
-    }, 1500);
+    // Extract QR hash from URL or use directly
+    const hash = result.includes('/verify/') 
+      ? result.split('/verify/').pop() || ''
+      : result;
+    
+    handleVerify(hash);
+  };
+
+  const handleManualVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualInput.trim()) {
+      handleVerify(manualInput.trim());
+    }
   };
 
   const resetScan = () => {
     setVerifiedDrug(null);
+    setScanHistory([]);
+    setHasAlerts(false);
+    setManualInput('');
   };
 
   return (
@@ -82,33 +128,31 @@ export const ConsumerVerifyPage = () => {
                   Scan the QR code on your medicine packaging to verify its authenticity 
                   and view its complete supply chain history.
                 </p>
+                
                 <Button 
                   size="lg" 
                   onClick={() => setShowScanner(true)}
-                  className="btn-hero text-lg"
+                  className="btn-hero text-lg mb-6"
                 >
                   <Scan className="w-5 h-5 mr-2" />
                   Scan QR Code
                 </Button>
 
-                {/* Demo Links */}
-                <div className="mt-12 pt-8 border-t border-border">
-                  <p className="text-sm text-muted-foreground mb-4">Demo: Try these sample drugs</p>
-                  <div className="flex flex-wrap justify-center gap-3">
-                    {mockDrugs.slice(0, 3).map((drug) => (
-                      <button
-                        key={drug.id}
-                        onClick={() => setVerifiedDrug(drug)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          drug.isAuthentic 
-                            ? 'bg-success/10 text-success hover:bg-success/20' 
-                            : 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-                        }`}
-                      >
-                        {drug.name}
-                      </button>
-                    ))}
-                  </div>
+                {/* Manual Input */}
+                <div className="mt-8 pt-8 border-t border-border">
+                  <p className="text-sm text-muted-foreground mb-4">Or enter the QR code hash manually:</p>
+                  <form onSubmit={handleManualVerify} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={manualInput}
+                      onChange={(e) => setManualInput(e.target.value)}
+                      placeholder="Enter QR hash (e.g., MED-1234567890)"
+                      className="input-field flex-1"
+                    />
+                    <Button type="submit" disabled={!manualInput.trim()}>
+                      Verify
+                    </Button>
+                  </form>
                 </div>
               </motion.div>
             ) : isScanning ? (
@@ -119,8 +163,8 @@ export const ConsumerVerifyPage = () => {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="text-center py-12"
               >
-                <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center mx-auto mb-6 animate-pulse">
-                  <Shield className="w-12 h-12 text-primary-foreground" />
+                <div className="w-24 h-24 rounded-full gradient-primary flex items-center justify-center mx-auto mb-6">
+                  <Loader2 className="w-12 h-12 text-primary-foreground animate-spin" />
                 </div>
                 <h2 className="text-2xl font-display font-bold text-foreground mb-2">
                   Verifying...
@@ -165,6 +209,19 @@ export const ConsumerVerifyPage = () => {
                       : 'DO NOT USE - Report to authorities immediately'}
                   </p>
                 </div>
+
+                {/* Alert Warning */}
+                {hasAlerts && (
+                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-warning">Alert History</p>
+                      <p className="text-sm text-muted-foreground">
+                        This drug has previous alerts in the system. Review the supply chain history below.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Drug Details */}
                 <div className="card-elevated p-6">
@@ -222,7 +279,7 @@ export const ConsumerVerifyPage = () => {
                   <h3 className="text-lg font-display font-semibold text-foreground mb-4">
                     Supply Chain Journey
                   </h3>
-                  <ScanTimeline scanHistory={verifiedDrug.scanHistory} />
+                  <ScanTimeline scanHistory={scanHistory} />
                 </div>
 
                 {/* Actions */}
@@ -243,7 +300,25 @@ export const ConsumerVerifyPage = () => {
                   )}
                 </div>
               </motion.div>
-            ) : null}
+            ) : (
+              <motion.div
+                key="not-found"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-12"
+              >
+                <AlertTriangle className="w-16 h-16 text-destructive mx-auto mb-4" />
+                <h2 className="text-2xl font-display font-bold text-foreground mb-2">
+                  Drug Not Found
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  This QR code is not registered in our system. It may be counterfeit.
+                </p>
+                <Button onClick={resetScan} variant="outline">
+                  Try Again
+                </Button>
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </main>
@@ -252,6 +327,9 @@ export const ConsumerVerifyPage = () => {
       {showScanner && (
         <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
       )}
+
+      {/* AI Chat */}
+      <AIChat context={verifiedDrug ? { drugId: verifiedDrug.id } : undefined} />
     </div>
   );
 };

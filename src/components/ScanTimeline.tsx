@@ -7,6 +7,14 @@ interface ScanTimelineProps {
 }
 
 export const ScanTimeline = ({ scanHistory }: ScanTimelineProps) => {
+  if (!scanHistory || scanHistory.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No scan history available
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {/* Timeline line */}
@@ -42,10 +50,12 @@ export const ScanTimeline = ({ scanHistory }: ScanTimelineProps) => {
                   <MapPin className="w-3 h-3" />
                   {scan.location}
                 </div>
-                <div className="flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  {scan.userName}
-                </div>
+                {scan.userName && (
+                  <div className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {scan.userName}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

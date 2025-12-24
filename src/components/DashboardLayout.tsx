@@ -12,10 +12,12 @@ import {
   LogOut, 
   Menu, 
   X,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -58,7 +60,21 @@ export const DashboardLayout = ({ children, title, role }: DashboardLayoutProps)
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile, signOut, loading } = useAuth();
   const items = navItems[role];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -107,7 +123,12 @@ export const DashboardLayout = ({ children, title, role }: DashboardLayoutProps)
           <div className="px-6 py-4">
             <div className="bg-sidebar-accent rounded-lg px-4 py-3">
               <p className="text-xs text-sidebar-foreground/60 mb-1">Logged in as</p>
-              <p className="text-sm font-semibold text-sidebar-foreground">{roleLabels[role]}</p>
+              <p className="text-sm font-semibold text-sidebar-foreground">
+                {profile?.name || roleLabels[role]}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 mt-1">
+                {profile?.organization || roleLabels[role]}
+              </p>
             </div>
           </div>
 
@@ -140,7 +161,7 @@ export const DashboardLayout = ({ children, title, role }: DashboardLayoutProps)
             <Button
               variant="ghost"
               className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
-              onClick={() => navigate('/auth')}
+              onClick={handleSignOut}
             >
               <LogOut className="w-5 h-5 mr-3" />
               Sign Out
