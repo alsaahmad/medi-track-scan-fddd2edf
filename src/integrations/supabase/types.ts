@@ -14,16 +14,196 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          description: string
+          drug_id: string
+          id: string
+          resolved: boolean
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          description: string
+          drug_id: string
+          id?: string
+          resolved?: boolean
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          description?: string
+          drug_id?: string
+          id?: string
+          resolved?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_drug_id_fkey"
+            columns: ["drug_id"]
+            isOneToOne: false
+            referencedRelation: "drugs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drugs: {
+        Row: {
+          batch_number: string
+          created_at: string
+          current_status: Database["public"]["Enums"]["drug_status"]
+          drug_name: string
+          expiry_date: string
+          id: string
+          manufacturer_id: string
+          qr_code_hash: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["drug_status"]
+          drug_name: string
+          expiry_date: string
+          id?: string
+          manufacturer_id: string
+          qr_code_hash: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["drug_status"]
+          drug_name?: string
+          expiry_date?: string
+          id?: string
+          manufacturer_id?: string
+          qr_code_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          organization: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          organization?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          organization?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scan_logs: {
+        Row: {
+          ai_explanation: string | null
+          drug_id: string
+          id: string
+          location: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          scan_time: string
+          scanned_by_user_id: string | null
+          verification_result: string
+        }
+        Insert: {
+          ai_explanation?: string | null
+          drug_id: string
+          id?: string
+          location?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          scan_time?: string
+          scanned_by_user_id?: string | null
+          verification_result: string
+        }
+        Update: {
+          ai_explanation?: string | null
+          drug_id?: string
+          id?: string
+          location?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          scan_time?: string
+          scanned_by_user_id?: string | null
+          verification_result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_logs_drug_id_fkey"
+            columns: ["drug_id"]
+            isOneToOne: false
+            referencedRelation: "drugs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "manufacturer"
+        | "distributor"
+        | "pharmacy"
+        | "consumer"
+        | "admin"
+      drug_status:
+        | "created"
+        | "distributed"
+        | "in_pharmacy"
+        | "sold"
+        | "flagged"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +330,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "manufacturer",
+        "distributor",
+        "pharmacy",
+        "consumer",
+        "admin",
+      ],
+      drug_status: ["created", "distributed", "in_pharmacy", "sold", "flagged"],
+    },
   },
 } as const

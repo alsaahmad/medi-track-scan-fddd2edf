@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { Shield, Mail, Lock, User, Building2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { z } from "zod";
 
 type UserRole = 'manufacturer' | 'distributor' | 'pharmacy' | 'admin' | 'consumer';
 
@@ -14,6 +16,13 @@ const roles: { value: UserRole; label: string; description: string }[] = [
   { value: 'admin', label: 'Administrator', description: 'Monitor all activity' },
 ];
 
+const authSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  company: z.string().min(2, "Company name must be at least 2 characters").optional(),
+});
+
 export const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -21,30 +30,91 @@ export const AuthPage = () => {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [selectedRole, setSelectedRole] = useState<UserRole>('pharmacy');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, signUp, user, role, loading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Demo login - redirect based on role
-    const roleRoutes: Record<UserRole, string> = {
-      manufacturer: '/manufacturer',
-      distributor: '/distributor',
-      pharmacy: '/pharmacy',
-      admin: '/admin',
-      consumer: '/verify',
-    };
-
-    toast({
-      title: isLogin ? "Welcome back!" : "Account created!",
-      description: `Logging in as ${selectedRole}...`,
-    });
-
-    setTimeout(() => {
-      navigate(roleRoutes[selectedRole]);
-    }, 1000);
+  const roleRoutes: Record<UserRole, string> = {
+    manufacturer: '/manufacturer',
+    distributor: '/distributor',
+    pharmacy: '/pharmacy',
+    admin: '/admin',
+    consumer: '/verify',
   };
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user && role) {
+      navigate(roleRoutes[role as UserRole] || '/');
+    }
+  }, [user, role, loading, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Validate input
+      const validationData = isLogin 
+        ? { email, password }
+        : { email, password, name, company };
+      
+      authSchema.parse(validationData);
+
+      if (isLogin) {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast({
+            title: "Login Failed",
+            description: error.message === "Invalid login credentials" 
+              ? "Invalid email or password" 
+              : error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Welcome back!",
+          description: "Redirecting to your dashboard...",
+        });
+      } else {
+        const { error } = await signUp(email, password, name, company, selectedRole);
+        if (error) {
+          toast({
+            title: "Signup Failed",
+            description: error.message.includes("already registered")
+              ? "This email is already registered. Please sign in."
+              : error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Account created!",
+          description: "Redirecting to your dashboard...",
+        });
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: err.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-primary">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -139,35 +209,38 @@ export const AuthPage = () => {
                   placeholder="••••••••"
                   className="input-field pl-12"
                   required
+                  minLength={6}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                I am a...
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {roles.map((role) => (
-                  <button
-                    key={role.value}
-                    type="button"
-                    onClick={() => setSelectedRole(role.value)}
-                    className={`p-3 rounded-lg border-2 text-left transition-all ${
-                      selectedRole === role.value
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <p className="font-medium text-sm text-foreground">{role.label}</p>
-                    <p className="text-xs text-muted-foreground">{role.description}</p>
-                  </button>
-                ))}
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  I am a...
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {roles.map((role) => (
+                    <button
+                      key={role.value}
+                      type="button"
+                      onClick={() => setSelectedRole(role.value)}
+                      className={`p-3 rounded-lg border-2 text-left transition-all ${
+                        selectedRole === role.value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <p className="font-medium text-sm text-foreground">{role.label}</p>
+                      <p className="text-xs text-muted-foreground">{role.description}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <Button type="submit" className="w-full btn-hero">
-              {isLogin ? "Sign In" : "Create Account"}
+            <Button type="submit" className="w-full btn-hero" disabled={isSubmitting}>
+              {isSubmitting ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </form>
