@@ -36,10 +36,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchingRef = useRef(false);
   const mountedRef = useRef(true);
 
-  const fetchUserData = useCallback(async (userId: string): Promise<boolean> => {
+  const fetchUserData = useCallback(async (userId: string): Promise<{ hasProfile: boolean; hasRole: boolean }> => {
     // Prevent duplicate fetches
-    if (fetchingRef.current) return false;
+    if (fetchingRef.current) return { hasProfile: false, hasRole: false };
     fetchingRef.current = true;
+    
+    let hasProfile = false;
+    let hasRole = false;
     
     try {
       // Fetch profile
@@ -53,8 +56,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error fetching profile:', profileError);
       }
       
-      if (mountedRef.current && profileData) {
+      if (mountedRef.current) {
         setProfile(profileData);
+        hasProfile = !!profileData;
       }
 
       // Fetch role
@@ -68,14 +72,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error fetching role:', roleError);
       }
       
-      if (mountedRef.current && roleData) {
-        setRole(roleData.role as AppRole);
+      if (mountedRef.current) {
+        setRole(roleData?.role as AppRole ?? null);
+        hasRole = !!roleData;
       }
       
-      return true;
+      return { hasProfile, hasRole };
     } catch (error) {
       console.error('Error in fetchUserData:', error);
-      return false;
+      return { hasProfile: false, hasRole: false };
     } finally {
       fetchingRef.current = false;
     }
@@ -121,15 +126,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
-          // For sign in/sign up events, fetch user data
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            // Reset fetching ref to allow new fetch
-            fetchingRef.current = false;
-            setLoading(true);
-            await fetchUserData(newSession.user.id);
-            if (mountedRef.current) {
-              setLoading(false);
+          // For sign in events only (NOT signup - that's handled in signUp function)
+          if (event === 'SIGNED_IN') {
+            // Check if we're already handling signup flow
+            if (!fetchingRef.current) {
+              setLoading(true);
+              fetchingRef.current = false; // Reset to allow fetch
+              await fetchUserData(newSession.user.id);
+              // CRITICAL: Always resolve loading
+              if (mountedRef.current) {
+                setLoading(false);
+              }
             }
+          } else if (event === 'TOKEN_REFRESHED') {
+            // Token refresh - just update data silently
+            fetchingRef.current = false;
+            await fetchUserData(newSession.user.id);
           }
         } else if (event === 'SIGNED_OUT') {
           // Clear user data on sign out
@@ -166,29 +178,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error };
     }
 
-    // If signup successful, add role and update profile
+    // If signup successful, CREATE profile and role (don't rely on triggers)
     if (data.user) {
       try {
-        // Update profile with organization (trigger creates initial profile)
-        await supabase
+        // Wait a moment for the auth trigger to create initial profile
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Upsert profile - create if doesn't exist, update if it does
+        const { error: profileError } = await supabase
           .from('profiles')
-          .update({ name, organization })
-          .eq('user_id', data.user.id);
+          .upsert({ 
+            user_id: data.user.id, 
+            email: email,
+            name, 
+            organization 
+          }, { 
+            onConflict: 'user_id' 
+          });
+        
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
 
-        // Add user role
-        await supabase
+        // Insert user role (use insert with error handling for duplicates)
+        const { error: roleError } = await supabase
           .from('user_roles')
           .insert({ user_id: data.user.id, role: userRole });
+        
+        if (roleError && !roleError.message.includes('duplicate')) {
+          console.error('Error creating role:', roleError);
+        }
         
         // Reset fetch ref and fetch user data
         fetchingRef.current = false;
         await fetchUserData(data.user.id);
+        
+        // CRITICAL: Always set loading to false after signup completes
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       } catch (err) {
         console.error('Error setting up user profile:', err);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
+    } else {
+      setLoading(false);
     }
     
-    // Note: Don't set loading to false here - onAuthStateChange will handle it
     return { error: null };
   };
 
