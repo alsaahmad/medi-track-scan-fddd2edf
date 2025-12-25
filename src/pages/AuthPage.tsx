@@ -51,7 +51,16 @@ export const AuthPage = () => {
       console.log('Redirecting to:', targetRoute, 'Role:', role);
       navigate(targetRoute, { replace: true });
     }
-  }, [user, role, loading, navigate]);
+    // If user exists but no role after loading, show error and stay on auth page
+    if (!loading && user && !role) {
+      console.error('User has no role assigned');
+      toast({
+        title: "Profile Error",
+        description: "Your account is missing a role. Please contact support or try signing up again.",
+        variant: "destructive",
+      });
+    }
+  }, [user, role, loading, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
