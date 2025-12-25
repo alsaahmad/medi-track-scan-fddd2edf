@@ -18,6 +18,7 @@ interface AuthContextType {
   profile: Profile | null;
   role: AppRole | null;
   loading: boolean;
+  authError: string | null;
   signUp: (email: string, password: string, name: string, organization: string, role: AppRole) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -25,16 +26,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_TIMEOUT_MS = 3000; // Hard 3-second timeout
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   
   // Use ref to track if we're currently fetching to prevent duplicate calls
   const fetchingRef = useRef(false);
   const mountedRef = useRef(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchUserData = useCallback(async (userId: string): Promise<{ hasProfile: boolean; hasRole: boolean }> => {
     // Prevent duplicate fetches
@@ -86,10 +91,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Helper to clear timeout
+  const clearAuthTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  // Helper to set timeout failsafe
+  const setAuthTimeout = useCallback(() => {
+    clearAuthTimeout();
+    timeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        console.warn('AUTH TIMEOUT: Profile fetch exceeded 3 seconds - forcing completion');
+        setLoading(false);
+        setAuthError('Profile loading timed out. Please try again.');
+      }
+    }, AUTH_TIMEOUT_MS);
+  }, [clearAuthTimeout]);
+
   useEffect(() => {
     mountedRef.current = true;
     
     const initializeAuth = async () => {
+      // Start timeout immediately
+      setAuthTimeout();
+      
       try {
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -100,12 +128,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
+          console.log('Fetching user data for:', currentSession.user.id);
           await fetchUserData(currentSession.user.id);
+          console.log('User data fetch complete');
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
+        setAuthError('Failed to initialize authentication');
       } finally {
+        clearAuthTimeout();
         if (mountedRef.current) {
+          console.log('Auth initialization complete - setting loading to false');
           setLoading(false);
         }
       }
@@ -154,9 +187,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       mountedRef.current = false;
+      clearAuthTimeout();
       subscription.unsubscribe();
     };
-  }, [fetchUserData]);
+  }, [fetchUserData, setAuthTimeout, clearAuthTimeout]);
 
   const signUp = async (email: string, password: string, name: string, organization: string, userRole: AppRole) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -255,6 +289,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       profile, 
       role, 
       loading, 
+      authError,
       signUp, 
       signIn, 
       signOut 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Shield, Mail, Lock, User, Building2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +33,8 @@ export const AuthPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { signIn, signUp, user, role, loading } = useAuth();
+  const location = useLocation();
+  const { signIn, signUp, user, role, loading, authError } = useAuth();
 
   const roleRoutes: Record<UserRole, string> = {
     manufacturer: '/manufacturer',
@@ -42,6 +43,27 @@ export const AuthPage = () => {
     admin: '/admin',
     consumer: '/verify',
   };
+
+  // Show error from redirect or auth timeout
+  useEffect(() => {
+    const stateError = (location.state as { error?: string })?.error;
+    if (stateError) {
+      toast({
+        title: "Authentication Error",
+        description: stateError,
+        variant: "destructive",
+      });
+      // Clear the state to prevent showing error again
+      window.history.replaceState({}, document.title);
+    }
+    if (authError) {
+      toast({
+        title: "Authentication Error",
+        description: authError,
+        variant: "destructive",
+      });
+    }
+  }, [location.state, authError, toast]);
 
   // Redirect if already logged in - only when fully loaded with role
   useEffect(() => {
