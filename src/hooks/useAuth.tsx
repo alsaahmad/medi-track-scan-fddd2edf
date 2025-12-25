@@ -1,3 +1,4 @@
+// Auth hook - non-blocking profile fetch with fallback roles
 import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
