@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -31,10 +31,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(false);
+  
+  // Use ref to track if we're currently fetching to prevent duplicate calls
+  const fetchingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  const fetchUserData = useCallback(async (userId: string) => {
-    setProfileLoading(true);
+  const fetchUserData = useCallback(async (userId: string): Promise<boolean> => {
+    // Prevent duplicate fetches
+    if (fetchingRef.current) return false;
+    fetchingRef.current = true;
+    
     try {
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
@@ -47,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error fetching profile:', profileError);
       }
       
-      if (profileData) {
+      if (mountedRef.current && profileData) {
         setProfile(profileData);
       }
 
@@ -62,35 +68,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error('Error fetching role:', roleError);
       }
       
-      if (roleData) {
+      if (mountedRef.current && roleData) {
         setRole(roleData.role as AppRole);
       }
+      
+      return true;
     } catch (error) {
       console.error('Error in fetchUserData:', error);
+      return false;
     } finally {
-      setProfileLoading(false);
+      fetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        if (!mounted) return;
+    mountedRef.current = true;
+    
+    const initializeAuth = async () => {
+      try {
+        // Get current session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!mountedRef.current) return;
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          // Use setTimeout to avoid Supabase auth deadlock
-          setTimeout(() => {
-            if (mounted) {
-              fetchUserData(currentSession.user.id);
+          await fetchUserData(currentSession.user.id);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Initialize auth first
+    initializeAuth();
+
+    // Set up auth state listener for future changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        if (!mountedRef.current) return;
+        
+        console.log('Auth state change:', event);
+        
+        // Update session and user immediately
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        if (newSession?.user) {
+          // For sign in/sign up events, fetch user data
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            // Reset fetching ref to allow new fetch
+            fetchingRef.current = false;
+            setLoading(true);
+            await fetchUserData(newSession.user.id);
+            if (mountedRef.current) {
+              setLoading(false);
             }
-          }, 0);
-        } else {
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Clear user data on sign out
           setProfile(null);
           setRole(null);
           setLoading(false);
@@ -98,38 +140,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-        
-        setSession(existingSession);
-        setUser(existingSession?.user ?? null);
-        
-        if (existingSession?.user) {
-          await fetchUserData(existingSession.user.id);
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, [fetchUserData]);
 
   const signUp = async (email: string, password: string, name: string, organization: string, userRole: AppRole) => {
     const redirectUrl = `${window.location.origin}/`;
+    
+    // Set loading before signup
+    setLoading(true);
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -140,30 +161,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    if (error) return { error };
-
-    // If signup successful, add role
-    if (data.user) {
-      // Update profile with organization
-      await supabase
-        .from('profiles')
-        .update({ name, organization })
-        .eq('user_id', data.user.id);
-
-      // Add user role
-      await supabase
-        .from('user_roles')
-        .insert({ user_id: data.user.id, role: userRole });
-      
-      // Fetch the user data to update state
-      await fetchUserData(data.user.id);
+    if (error) {
+      setLoading(false);
+      return { error };
     }
 
+    // If signup successful, add role and update profile
+    if (data.user) {
+      try {
+        // Update profile with organization (trigger creates initial profile)
+        await supabase
+          .from('profiles')
+          .update({ name, organization })
+          .eq('user_id', data.user.id);
+
+        // Add user role
+        await supabase
+          .from('user_roles')
+          .insert({ user_id: data.user.id, role: userRole });
+        
+        // Reset fetch ref and fetch user data
+        fetchingRef.current = false;
+        await fetchUserData(data.user.id);
+      } catch (err) {
+        console.error('Error setting up user profile:', err);
+      }
+    }
+    
+    // Note: Don't set loading to false here - onAuthStateChange will handle it
     return { error: null };
   };
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoading(false);
+    }
+    // Note: Don't set loading to false on success - onAuthStateChange will handle it
     return { error };
   };
 
@@ -175,17 +210,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   };
 
-  // Compute overall loading state - loading is true until we have auth resolved
-  // AND if there's a user, until we've finished loading their profile
-  const isLoading = loading || (user !== null && profileLoading);
-
   return (
     <AuthContext.Provider value={{ 
       user, 
       session, 
       profile, 
       role, 
-      loading: isLoading, 
+      loading, 
       signUp, 
       signIn, 
       signOut 
