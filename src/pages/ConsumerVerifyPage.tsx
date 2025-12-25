@@ -11,7 +11,9 @@ import {
   Calendar,
   Building2,
   Hash,
-  Loader2
+  Loader2,
+  Bot,
+  Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QRScanner } from "@/components/QRScanner";
@@ -19,6 +21,7 @@ import { ScanTimeline } from "@/components/ScanTimeline";
 import { AIChat } from "@/components/AIChat";
 import { useVerifyDrug } from "@/hooks/useDrugs";
 import { Drug, ScanLog, mapDatabaseDrugToUI, mapDatabaseScanLogToUI } from "@/lib/mockData";
+import { DEMO_QR_CODES } from "@/lib/demoData";
 
 export const ConsumerVerifyPage = () => {
   const { drugId } = useParams();
@@ -28,6 +31,7 @@ export const ConsumerVerifyPage = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [hasAlerts, setHasAlerts] = useState(false);
   const [manualInput, setManualInput] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
   
   const verifyDrug = useVerifyDrug();
 
@@ -40,6 +44,7 @@ export const ConsumerVerifyPage = () => {
 
   const handleVerify = async (qrHash: string) => {
     setIsScanning(true);
+    setAiAnalysis('');
     
     try {
       const result = await verifyDrug.mutateAsync(qrHash);
@@ -52,13 +57,28 @@ export const ConsumerVerifyPage = () => {
         const mappedLogs = result.scanLogs.map(l => mapDatabaseScanLogToUI(l));
         setScanHistory(mappedLogs);
         setHasAlerts(result.alerts.length > 0);
+        
+        // Get the latest AI explanation from scan history
+        const latestExplanation = result.scanLogs
+          .filter(log => log.ai_explanation)
+          .pop()?.ai_explanation || '';
+        
+        // Generate AI analysis summary
+        if (result.isAuthentic) {
+          setAiAnalysis(latestExplanation || 'This medicine has been verified through the complete supply chain. All checkpoints confirm authenticity. The drug was manufactured by a verified facility, distributed through authorized channels, and stored properly at each stage.');
+        } else {
+          const alertDescriptions = result.alerts.map(a => a.description).join(' ');
+          setAiAnalysis(latestExplanation || `⚠️ WARNING: This drug has been flagged for the following reasons:\n\n${alertDescriptions || 'Suspicious activity detected in the supply chain. The verification system has identified potential issues with this medication. DO NOT CONSUME and report to local authorities immediately.'}`);
+        }
       } else {
         setVerifiedDrug(null);
         setScanHistory([]);
+        setAiAnalysis('This QR code is not registered in our verification system. This could indicate a counterfeit product. Authentic medicines always have verifiable QR codes registered by the manufacturer.');
       }
     } catch (error) {
       console.error('Verification error:', error);
       setVerifiedDrug(null);
+      setAiAnalysis('An error occurred during verification. Please try again or contact support.');
     } finally {
       setIsScanning(false);
     }
@@ -87,6 +107,7 @@ export const ConsumerVerifyPage = () => {
     setScanHistory([]);
     setHasAlerts(false);
     setManualInput('');
+    setAiAnalysis('');
   };
 
   return (
@@ -138,8 +159,39 @@ export const ConsumerVerifyPage = () => {
                   Scan QR Code
                 </Button>
 
-                {/* Manual Input */}
+                {/* Demo QR Codes */}
                 <div className="mt-8 pt-8 border-t border-border">
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Info className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Try these demo QR codes:</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 mb-6">
+                    <button
+                      onClick={() => handleVerify('DEMO-AUTHENTIC-001')}
+                      className="px-4 py-3 text-sm bg-success/10 border border-success/20 rounded-lg hover:bg-success/20 transition-colors text-left"
+                    >
+                      <span className="font-medium text-success">✓ Authentic Drug</span>
+                      <span className="text-muted-foreground ml-2">- Amoxicillin 500mg</span>
+                    </button>
+                    <button
+                      onClick={() => handleVerify('DEMO-FLAGGED-002')}
+                      className="px-4 py-3 text-sm bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors text-left"
+                    >
+                      <span className="font-medium text-destructive">⚠ Counterfeit Drug</span>
+                      <span className="text-muted-foreground ml-2">- Duplicate QR detected</span>
+                    </button>
+                    <button
+                      onClick={() => handleVerify('DEMO-EXPIRED-003')}
+                      className="px-4 py-3 text-sm bg-warning/10 border border-warning/20 rounded-lg hover:bg-warning/20 transition-colors text-left"
+                    >
+                      <span className="font-medium text-warning">⏰ Expired Drug</span>
+                      <span className="text-muted-foreground ml-2">- Paracetamol 500mg</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Manual Input */}
+                <div className="pt-6 border-t border-border">
                   <p className="text-sm text-muted-foreground mb-4">Or enter the QR code hash manually:</p>
                   <form onSubmit={handleManualVerify} className="flex gap-2">
                     <input
@@ -209,6 +261,29 @@ export const ConsumerVerifyPage = () => {
                       : 'DO NOT USE - Report to authorities immediately'}
                   </p>
                 </div>
+
+                {/* AI Analysis Section */}
+                {aiAnalysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="card-elevated p-6 border-l-4 border-l-primary"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-display font-semibold text-foreground mb-2">
+                          AI Verification Analysis
+                        </h3>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                          {aiAnalysis}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
 
                 {/* Alert Warning */}
                 {hasAlerts && (

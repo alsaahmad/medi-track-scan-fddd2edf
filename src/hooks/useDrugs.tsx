@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { isDemoQRCode, getDemoData } from '@/lib/demoData';
 
 export type DrugStatus = 'created' | 'distributed' | 'in_pharmacy' | 'sold' | 'flagged';
 
@@ -350,7 +351,15 @@ export const useCreateAlert = () => {
 export const useVerifyDrug = () => {
   return useMutation({
     mutationFn: async (qrHash: string) => {
-      // Get drug by QR hash
+      // Check if it's a demo QR code first
+      if (isDemoQRCode(qrHash)) {
+        const demoData = getDemoData(qrHash);
+        if (demoData) {
+          return demoData;
+        }
+      }
+
+      // Get drug by QR hash from database
       const { data: drug, error: drugError } = await supabase
         .from('drugs')
         .select('*')
