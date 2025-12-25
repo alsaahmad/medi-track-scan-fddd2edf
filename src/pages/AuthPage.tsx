@@ -43,12 +43,13 @@ export const AuthPage = () => {
     consumer: '/verify',
   };
 
-  // Redirect if already logged in
+  // Redirect if already logged in - only when fully loaded with role
   useEffect(() => {
     if (!loading && user && role) {
-      navigate(roleRoutes[role as UserRole] || '/');
+      const targetRoute = roleRoutes[role as UserRole] || '/';
+      navigate(targetRoute, { replace: true });
     }
-  }, [user, role, loading, navigate]);
+  }, [user, role, loading, navigate, roleRoutes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
