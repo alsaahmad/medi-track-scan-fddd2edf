@@ -9,9 +9,9 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, authError } = useAuth();
 
-  // Always show loading while auth is being resolved
+  // Show loading ONLY while auth is actively being resolved
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -23,22 +23,23 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
+  // If there was an auth error or timeout, redirect to auth
+  if (authError) {
+    console.warn('Auth error detected:', authError);
+    return <Navigate to="/auth" state={{ error: authError }} replace />;
+  }
+
   // If not authenticated, redirect to auth page
   if (!user) {
+    console.log('No user found - redirecting to auth');
     return <Navigate to="/auth" replace />;
   }
 
-  // If we need role-based access but role is not yet available, show loading
-  // This shouldn't happen since loading includes profile loading, but as a safety
+  // CRITICAL: If loading is done and role is missing, redirect to auth
+  // Do NOT wait indefinitely for role
   if (allowedRoles && !role) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading your profile...</p>
-        </div>
-      </div>
-    );
+    console.warn('User authenticated but role missing - redirecting to auth');
+    return <Navigate to="/auth" state={{ error: 'Profile setup incomplete. Please sign in again.' }} replace />;
   }
 
   // Check if user has required role
