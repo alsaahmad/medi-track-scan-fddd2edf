@@ -45,11 +45,13 @@ export const AuthPage = () => {
 
   // Redirect if already logged in - only when fully loaded with role
   useEffect(() => {
+    // Only redirect when NOT loading AND we have both user AND role
     if (!loading && user && role) {
       const targetRoute = roleRoutes[role as UserRole] || '/';
+      console.log('Redirecting to:', targetRoute, 'Role:', role);
       navigate(targetRoute, { replace: true });
     }
-  }, [user, role, loading, navigate, roleRoutes]);
+  }, [user, role, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,10 +111,16 @@ export const AuthPage = () => {
     }
   };
 
+  // Show loading while auth is being resolved
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">
+            {user ? 'Loading your profile...' : 'Checking authentication...'}
+          </p>
+        </div>
       </div>
     );
   }
