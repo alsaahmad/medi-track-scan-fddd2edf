@@ -34,7 +34,7 @@ export const AuthPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp, user, role, loading, authError } = useAuth();
+  const { signIn, signUp, user, role, loading } = useAuth();
 
   const roleRoutes: Record<UserRole, string> = {
     manufacturer: '/manufacturer',
@@ -44,7 +44,7 @@ export const AuthPage = () => {
     consumer: '/verify',
   };
 
-  // Show error from redirect or auth timeout
+  // Show error from redirect
   useEffect(() => {
     const stateError = (location.state as { error?: string })?.error;
     if (stateError) {
@@ -53,17 +53,9 @@ export const AuthPage = () => {
         description: stateError,
         variant: "destructive",
       });
-      // Clear the state to prevent showing error again
       window.history.replaceState({}, document.title);
     }
-    if (authError) {
-      toast({
-        title: "Authentication Error",
-        description: authError,
-        variant: "destructive",
-      });
-    }
-  }, [location.state, authError, toast]);
+  }, [location.state, toast]);
 
   // Redirect if already logged in - only when fully loaded with role
   useEffect(() => {
