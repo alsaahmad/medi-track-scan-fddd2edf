@@ -163,6 +163,238 @@ export const DEMO_DRUGS: Record<string, {
       }
     ],
     isAuthentic: false
+  },
+  'DEMO-INSULIN-004': {
+    drug: {
+      id: 'demo-4',
+      drug_name: 'Insulin Glargine 100U/mL',
+      batch_number: 'INS-2024-789',
+      expiry_date: '2025-08-20',
+      manufacturer_id: 'demo-manufacturer',
+      qr_code_hash: 'DEMO-INSULIN-004',
+      current_status: 'in_pharmacy',
+      created_at: '2024-03-01T08:00:00Z',
+      updated_at: '2024-04-15T10:30:00Z'
+    },
+    scanLogs: [
+      {
+        id: 'log-9',
+        drug_id: 'demo-4',
+        scanned_by_user_id: 'manufacturer-1',
+        role: 'manufacturer',
+        location: 'NovoMed Biologics, Pune',
+        scan_time: '2024-03-01T08:00:00Z',
+        verification_result: 'created',
+        ai_explanation: 'Cold-chain insulin product registered. Temperature monitoring device attached. Requires 2-8°C storage.'
+      },
+      {
+        id: 'log-10',
+        drug_id: 'demo-4',
+        scanned_by_user_id: 'distributor-1',
+        role: 'distributor',
+        location: 'ColdChain Logistics Hub, Chennai',
+        scan_time: '2024-03-20T14:00:00Z',
+        verification_result: 'distributed',
+        ai_explanation: 'Temperature maintained at 4.2°C during transport. Cold-chain integrity verified via IoT sensors.'
+      },
+      {
+        id: 'log-11',
+        drug_id: 'demo-4',
+        scanned_by_user_id: 'pharmacy-1',
+        role: 'pharmacy',
+        location: 'MediCare Pharmacy, Hyderabad',
+        scan_time: '2024-04-15T10:30:00Z',
+        verification_result: 'in_pharmacy',
+        ai_explanation: 'Received in refrigerated storage. Product verified authentic. Ready for dispensing to patients.'
+      }
+    ],
+    alerts: [],
+    isAuthentic: true
+  },
+  'DEMO-ANTIBIOTIC-005': {
+    drug: {
+      id: 'demo-5',
+      drug_name: 'Azithromycin 250mg',
+      batch_number: 'AZI-2024-456',
+      expiry_date: '2026-02-28',
+      manufacturer_id: 'demo-manufacturer',
+      qr_code_hash: 'DEMO-ANTIBIOTIC-005',
+      current_status: 'distributed',
+      created_at: '2024-05-10T09:00:00Z',
+      updated_at: '2024-06-05T11:00:00Z'
+    },
+    scanLogs: [
+      {
+        id: 'log-12',
+        drug_id: 'demo-5',
+        scanned_by_user_id: 'manufacturer-1',
+        role: 'manufacturer',
+        location: 'Cipla Manufacturing, Goa',
+        scan_time: '2024-05-10T09:00:00Z',
+        verification_result: 'created',
+        ai_explanation: 'Z-Pack antibiotic registered. Quality control passed. Batch tested for potency and purity.'
+      },
+      {
+        id: 'log-13',
+        drug_id: 'demo-5',
+        scanned_by_user_id: 'distributor-1',
+        role: 'distributor',
+        location: 'PharmaDistro Warehouse, Mumbai',
+        scan_time: '2024-06-05T11:00:00Z',
+        verification_result: 'distributed',
+        ai_explanation: 'Shipment received and verified. Currently in transit to retail pharmacies across Western region.'
+      }
+    ],
+    alerts: [],
+    isAuthentic: true
+  },
+  'DEMO-CARDIAC-006': {
+    drug: {
+      id: 'demo-6',
+      drug_name: 'Atorvastatin 20mg',
+      batch_number: 'ATV-2024-321',
+      expiry_date: '2026-09-15',
+      manufacturer_id: 'demo-manufacturer',
+      qr_code_hash: 'DEMO-CARDIAC-006',
+      current_status: 'sold',
+      created_at: '2024-02-20T07:00:00Z',
+      updated_at: '2024-05-18T16:00:00Z'
+    },
+    scanLogs: [
+      {
+        id: 'log-14',
+        drug_id: 'demo-6',
+        scanned_by_user_id: 'manufacturer-1',
+        role: 'manufacturer',
+        location: 'Sun Pharma, Vadodara',
+        scan_time: '2024-02-20T07:00:00Z',
+        verification_result: 'created',
+        ai_explanation: 'Cholesterol-lowering statin registered. FDA-approved generic formulation.'
+      },
+      {
+        id: 'log-15',
+        drug_id: 'demo-6',
+        scanned_by_user_id: 'distributor-1',
+        role: 'distributor',
+        location: 'MediSupply Center, Ahmedabad',
+        scan_time: '2024-03-15T10:00:00Z',
+        verification_result: 'distributed',
+        ai_explanation: 'Standard distribution protocol followed. Ambient temperature maintained.'
+      },
+      {
+        id: 'log-16',
+        drug_id: 'demo-6',
+        scanned_by_user_id: 'pharmacy-1',
+        role: 'pharmacy',
+        location: 'Apollo Pharmacy, Surat',
+        scan_time: '2024-04-01T09:00:00Z',
+        verification_result: 'in_pharmacy',
+        ai_explanation: 'Pharmacy inventory updated. Product available for patient dispensing.'
+      },
+      {
+        id: 'log-17',
+        drug_id: 'demo-6',
+        scanned_by_user_id: null,
+        role: 'consumer',
+        location: 'Patient Purchase',
+        scan_time: '2024-05-18T16:00:00Z',
+        verification_result: 'sold',
+        ai_explanation: 'Verified authentic medication. Complete traceability from manufacturer to patient confirmed.'
+      }
+    ],
+    alerts: [],
+    isAuthentic: true
+  },
+  'DEMO-SUSPICIOUS-007': {
+    drug: {
+      id: 'demo-7',
+      drug_name: 'Metformin 500mg',
+      batch_number: 'MET-UNKNOWN',
+      expiry_date: '2025-11-30',
+      manufacturer_id: 'unknown-manufacturer',
+      qr_code_hash: 'DEMO-SUSPICIOUS-007',
+      current_status: 'flagged',
+      created_at: '2024-04-01T12:00:00Z',
+      updated_at: '2024-04-20T08:00:00Z'
+    },
+    scanLogs: [
+      {
+        id: 'log-18',
+        drug_id: 'demo-7',
+        scanned_by_user_id: null,
+        role: 'consumer',
+        location: 'Street Vendor, Unknown Location',
+        scan_time: '2024-04-20T08:00:00Z',
+        verification_result: 'flagged',
+        ai_explanation: 'CRITICAL WARNING: This drug has NO manufacturing record in our system. No authorized manufacturer has registered this batch. HIGH PROBABILITY OF COUNTERFEIT. Do NOT consume. Report to authorities immediately.'
+      }
+    ],
+    alerts: [
+      {
+        id: 'alert-4',
+        drug_id: 'demo-7',
+        alert_type: 'unregistered_product',
+        description: 'Product not found in any authorized manufacturer database',
+        created_at: '2024-04-20T08:00:00Z',
+        resolved: false
+      },
+      {
+        id: 'alert-5',
+        drug_id: 'demo-7',
+        alert_type: 'suspicious_origin',
+        description: 'First scan from unauthorized retail location',
+        created_at: '2024-04-20T08:01:00Z',
+        resolved: false
+      }
+    ],
+    isAuthentic: false
+  },
+  'DEMO-VACCINE-008': {
+    drug: {
+      id: 'demo-8',
+      drug_name: 'COVID-19 Vaccine (Covaxin)',
+      batch_number: 'COV-2024-BATCH-A1',
+      expiry_date: '2025-03-01',
+      manufacturer_id: 'demo-manufacturer',
+      qr_code_hash: 'DEMO-VACCINE-008',
+      current_status: 'in_pharmacy',
+      created_at: '2024-01-05T06:00:00Z',
+      updated_at: '2024-02-10T09:00:00Z'
+    },
+    scanLogs: [
+      {
+        id: 'log-19',
+        drug_id: 'demo-8',
+        scanned_by_user_id: 'manufacturer-1',
+        role: 'manufacturer',
+        location: 'Bharat Biotech, Hyderabad',
+        scan_time: '2024-01-05T06:00:00Z',
+        verification_result: 'created',
+        ai_explanation: 'COVID-19 vaccine batch registered. Ultra-cold chain initiated at -20°C. Government authorized batch for national immunization program.'
+      },
+      {
+        id: 'log-20',
+        drug_id: 'demo-8',
+        scanned_by_user_id: 'distributor-1',
+        role: 'distributor',
+        location: 'Government Medical Stores, Delhi',
+        scan_time: '2024-01-25T10:00:00Z',
+        verification_result: 'distributed',
+        ai_explanation: 'Received at government cold storage. Temperature log shows consistent -18°C to -22°C range. Batch allocated to vaccination centers.'
+      },
+      {
+        id: 'log-21',
+        drug_id: 'demo-8',
+        scanned_by_user_id: 'pharmacy-1',
+        role: 'pharmacy',
+        location: 'District Hospital Vaccination Center, Jaipur',
+        scan_time: '2024-02-10T09:00:00Z',
+        verification_result: 'in_pharmacy',
+        ai_explanation: 'Vaccine batch received at vaccination center. Cold chain verified intact. Ready for administration.'
+      }
+    ],
+    alerts: [],
+    isAuthentic: true
   }
 };
 

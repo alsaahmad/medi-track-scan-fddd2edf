@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Shield, Mail, Lock, User, Building2, ArrowRight } from "lucide-react";
+import { Shield, Mail, Lock, User, Building2, ArrowRight, Factory, Truck, Store, UserCog, CheckCircle2, Package, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,11 +9,11 @@ import { z } from "zod";
 
 type UserRole = 'manufacturer' | 'distributor' | 'pharmacy' | 'admin' | 'consumer';
 
-const roles: { value: UserRole; label: string; description: string }[] = [
-  { value: 'manufacturer', label: 'Manufacturer', description: 'Register and track drugs' },
-  { value: 'distributor', label: 'Distributor', description: 'Scan and update shipments' },
-  { value: 'pharmacy', label: 'Pharmacy', description: 'Verify before selling' },
-  { value: 'admin', label: 'Administrator', description: 'Monitor all activity' },
+const roles: { value: UserRole; label: string; description: string; icon: typeof Factory }[] = [
+  { value: 'manufacturer', label: 'Manufacturer', description: 'Register and track drugs', icon: Factory },
+  { value: 'distributor', label: 'Distributor', description: 'Scan and update shipments', icon: Truck },
+  { value: 'pharmacy', label: 'Pharmacy', description: 'Verify before selling', icon: Store },
+  { value: 'admin', label: 'Administrator', description: 'Monitor all activity', icon: UserCog },
 ];
 
 const authSchema = z.object({
@@ -151,32 +151,46 @@ export const AuthPage = () => {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-6 md:p-8">
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <Link to="/" className="flex items-center gap-2 mb-8">
-            <Shield className="w-8 h-8 text-primary" />
+          <Link to="/" className="flex items-center gap-3 mb-10">
+            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
+              <Shield className="w-6 h-6 text-primary-foreground" />
+            </div>
             <span className="font-display font-bold text-2xl text-foreground">MediTrack</span>
           </Link>
 
-          <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-            {isLogin ? "Welcome back" : "Create account"}
-          </h1>
-          <p className="text-muted-foreground mb-8">
-            {isLogin 
-              ? "Sign in to access your dashboard" 
-              : "Join MediTrack to start tracking drugs"
-            }
-          </p>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h1 className="text-4xl font-display font-bold text-foreground mb-3">
+              {isLogin ? "Welcome back" : "Get started"}
+            </h1>
+            <p className="text-muted-foreground text-lg mb-8">
+              {isLogin 
+                ? "Sign in to access your dashboard and manage your supply chain." 
+                : "Create your account to start tracking and verifying drugs."
+              }
+            </p>
+          </motion.div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-5"
+              >
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-semibold text-foreground mb-2">
                     Full Name
                   </label>
                   <div className="relative">
@@ -187,14 +201,14 @@ export const AuthPage = () => {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="John Doe"
                       className="input-field pl-12"
-                      required
+                      required={!isLogin}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Company Name
+                  <label className="block text-sm font-semibold text-foreground mb-2">
+                    Organization
                   </label>
                   <div className="relative">
                     <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -204,15 +218,15 @@ export const AuthPage = () => {
                       onChange={(e) => setCompany(e.target.value)}
                       placeholder="PharmaCorp Inc."
                       className="input-field pl-12"
-                      required
+                      required={!isLogin}
                     />
                   </div>
                 </div>
-              </>
+              </motion.div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 Email Address
               </label>
               <div className="relative">
@@ -229,7 +243,7 @@ export const AuthPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 Password
               </label>
               <div className="relative">
@@ -244,79 +258,166 @@ export const AuthPage = () => {
                   minLength={6}
                 />
               </div>
+              {isLogin && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Must be at least 6 characters
+                </p>
+              )}
             </div>
 
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  I am a...
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+              >
+                <label className="block text-sm font-semibold text-foreground mb-3">
+                  Select your role
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  {roles.map((role) => (
-                    <button
-                      key={role.value}
-                      type="button"
-                      onClick={() => setSelectedRole(role.value)}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${
-                        selectedRole === role.value
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <p className="font-medium text-sm text-foreground">{role.label}</p>
-                      <p className="text-xs text-muted-foreground">{role.description}</p>
-                    </button>
-                  ))}
+                  {roles.map((role) => {
+                    const Icon = role.icon;
+                    return (
+                      <button
+                        key={role.value}
+                        type="button"
+                        onClick={() => setSelectedRole(role.value)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all duration-200 group ${
+                          selectedRole === role.value
+                            ? 'border-primary bg-primary/5 shadow-md'
+                            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg transition-colors ${
+                            selectedRole === role.value 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                          }`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-foreground">{role.label}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{role.description}</p>
+                          </div>
+                          {selectedRole === role.value && (
+                            <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            <Button type="submit" className="w-full btn-hero" disabled={isSubmitting}>
-              {isSubmitting ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
-              <ArrowRight className="w-5 h-5 ml-2" />
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-semibold gradient-primary text-primary-foreground rounded-xl shadow-lg hover:shadow-glow transition-all duration-300 hover:-translate-y-0.5" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  Please wait...
+                </div>
+              ) : (
+                <>
+                  {isLogin ? "Sign In" : "Create Account"}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
+              )}
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary font-medium hover:underline"
+          <div className="mt-8 pt-6 border-t border-border">
+            <p className="text-center text-sm text-muted-foreground">
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-primary font-semibold hover:underline underline-offset-2"
+              >
+                {isLogin ? "Create one" : "Sign in"}
+              </button>
+            </p>
+          </div>
+
+          {isLogin && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-6 p-4 rounded-xl bg-muted/50 border border-border"
             >
-              {isLogin ? "Sign up" : "Sign in"}
-            </button>
-          </p>
+              <p className="text-xs text-muted-foreground text-center">
+                <span className="font-medium text-foreground">New to MediTrack?</span> Sign up as a Manufacturer, Distributor, or Pharmacy to start tracking your pharmaceutical supply chain.
+              </p>
+            </motion.div>
+          )}
         </motion.div>
       </div>
 
       {/* Right Side - Decorative */}
-      <div className="hidden lg:flex flex-1 gradient-hero items-center justify-center p-12">
+      <div className="hidden lg:flex flex-1 gradient-hero items-center justify-center p-12 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-20 w-72 h-72 rounded-full border-2 border-primary-foreground/30" />
+          <div className="absolute bottom-32 right-16 w-48 h-48 rounded-full border-2 border-primary-foreground/20" />
+          <div className="absolute top-1/2 left-1/3 w-96 h-96 rounded-full border border-primary-foreground/10" />
+        </div>
+        
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="max-w-lg text-center text-primary-foreground"
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="max-w-lg text-center text-primary-foreground relative z-10"
         >
-          <div className="w-24 h-24 rounded-full bg-primary-foreground/20 flex items-center justify-center mx-auto mb-8">
-            <Shield className="w-12 h-12" />
+          <div className="w-28 h-28 rounded-2xl bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-10 shadow-2xl">
+            <Shield className="w-14 h-14" />
           </div>
-          <h2 className="text-3xl font-display font-bold mb-4">
-            Secure Drug Verification
+          <h2 className="text-4xl font-display font-bold mb-6 leading-tight">
+            Secure Drug<br />Verification System
           </h2>
-          <p className="text-primary-foreground/80 text-lg">
+          <p className="text-primary-foreground/85 text-lg leading-relaxed mb-10">
             Join thousands of healthcare providers ensuring medication authenticity 
-            with our blockchain-grade verification system.
+            with our blockchain-grade verification and complete supply chain visibility.
           </p>
-          <div className="grid grid-cols-3 gap-6 mt-12">
+          
+          {/* Feature Pills */}
+          <div className="flex flex-wrap gap-3 justify-center mb-12">
             {[
-              { value: "10M+", label: "Verified Drugs" },
+              { icon: QrCode, text: 'QR Tracking' },
+              { icon: Package, text: 'Supply Chain' },
+              { icon: CheckCircle2, text: 'AI Verification' },
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + index * 0.1 }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/15 backdrop-blur-sm border border-primary-foreground/20"
+              >
+                <feature.icon className="w-4 h-4" />
+                <span className="text-sm font-medium">{feature.text}</span>
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-3 gap-8">
+            {[
+              { value: "10M+", label: "Drugs Verified" },
               { value: "50K+", label: "Partners" },
               { value: "99.9%", label: "Accuracy" },
             ].map((stat, index) => (
-              <div key={index}>
-                <p className="text-2xl font-display font-bold">{stat.value}</p>
-                <p className="text-sm text-primary-foreground/70">{stat.label}</p>
-              </div>
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 + index * 0.1 }}
+                className="p-4 rounded-xl bg-primary-foreground/10 backdrop-blur-sm"
+              >
+                <p className="text-3xl font-display font-bold">{stat.value}</p>
+                <p className="text-sm text-primary-foreground/70 mt-1">{stat.label}</p>
+              </motion.div>
             ))}
           </div>
         </motion.div>
