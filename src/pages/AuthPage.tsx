@@ -11,9 +11,8 @@ type UserRole = 'manufacturer' | 'distributor' | 'pharmacy' | 'admin' | 'consume
 
 const roles: { value: UserRole; label: string; description: string; icon: typeof Factory }[] = [
   { value: 'manufacturer', label: 'Manufacturer', description: 'Register and track drugs', icon: Factory },
-  { value: 'distributor', label: 'Distributor', description: 'Scan and update shipments', icon: Truck },
-  { value: 'pharmacy', label: 'Pharmacy', description: 'Verify before selling', icon: Store },
-  { value: 'admin', label: 'Administrator', description: 'Monitor all activity', icon: UserCog },
+  { value: 'distributor', label: 'Distributor', description: 'Manage shipments & logistics', icon: Truck },
+  { value: 'pharmacy', label: 'Pharmacy', description: 'Verify & dispense medicines', icon: Store },
 ];
 
 const authSchema = z.object({
